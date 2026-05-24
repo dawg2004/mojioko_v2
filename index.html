@@ -695,6 +695,56 @@ h1 .accent { color: var(--amber); }
   margin-bottom: 6px;
 }
 
+.bookmarklet-area {
+  background: var(--panel3);
+  border: 1px solid var(--border);
+  padding: 14px 12px;
+}
+
+.bookmarklet-step {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.bookmarklet-step .step-num {
+  color: var(--amber);
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+.bookmarklet-link {
+  display: block;
+  background: var(--panel3);
+  border: 2px dashed var(--amber-dim);
+  color: var(--amber);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  padding: 10px 14px;
+  text-align: center;
+  cursor: grab;
+  text-decoration: none;
+  letter-spacing: 0.1em;
+  transition: all 0.2s;
+  margin: 10px 0;
+}
+
+.bookmarklet-link:hover {
+  border-color: var(--amber-bright);
+  color: var(--amber-bright);
+  background: rgba(212,134,10,0.06);
+}
+
+.bookmarklet-note {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.5;
+}
+
 .plaud-status {
   font-family: 'Share Tech Mono', monospace;
   font-size: 10px;
@@ -844,6 +894,7 @@ h1 .accent { color: var(--amber); }
       <div class="plaud-tabs">
         <button class="plaud-tab active" id="tabLogin" onclick="switchPlaudTab('login')">LOGIN</button>
         <button class="plaud-tab" id="tabToken" onclick="switchPlaudTab('token')">TOKEN</button>
+        <button class="plaud-tab" id="tabBookmark" onclick="switchPlaudTab('bookmark')">🔖 AUTO</button>
       </div>
 
       <!-- Login form -->
@@ -885,6 +936,19 @@ h1 .accent { color: var(--amber); }
             <option value="apne1" selected>REGION: JP</option>
           </select>
           <button class="plaud-connect-btn" id="plaudConnectBtn" onclick="connectPlaud()">▶ LINK</button>
+        </div>
+      </div>
+
+      <!-- Bookmarklet form -->
+      <div class="plaud-form hidden" id="plaudBookmarkForm">
+        <div class="bookmarklet-area">
+          <div class="bookmarklet-step"><span class="step-num">01</span>下のボタンをブラウザの<br>　　ブックマークバーにドラッグ</div>
+          <a class="bookmarklet-link" id="bookmarkletLink" href="#" title="ブックマークバーにドラッグしてください">
+            📡 GET PLAUD TOKEN
+          </a>
+          <div class="bookmarklet-step"><span class="step-num">02</span>app.plaud.ai を開く</div>
+          <div class="bookmarklet-step"><span class="step-num">03</span>そのブックマークをクリック<br>　　→ ここに自動で戻ります！</div>
+          <div class="bookmarklet-note">// スマホの場合はブックマークのURLを<br>JavaScriptコードに書き換えてください</div>
         </div>
       </div>
 
@@ -1044,8 +1108,46 @@ let plaudApiBase = 'https://api-apne1.plaud.ai';
 function switchPlaudTab(tab) {
   document.getElementById('plaudLoginForm').classList.toggle('hidden', tab !== 'login');
   document.getElementById('plaudTokenForm').classList.toggle('hidden', tab !== 'token');
+  document.getElementById('plaudBookmarkForm').classList.toggle('hidden', tab !== 'bookmark');
   document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
   document.getElementById('tabToken').classList.toggle('active', tab === 'token');
+  document.getElementById('tabBookmark').classList.toggle('active', tab === 'bookmark');
+}
+
+function initBookmarklet() {
+  // ブックマークレットのhrefを動的に生成（現在のページURLに戻る）
+  const returnUrl = window.location.origin + window.location.pathname;
+  const js = `javascript:(function(){try{var k=Object.keys(localStorage).find(function(k){return k.includes('workspaceList')});var ws=JSON.parse(localStorage[k]||'[]')[0];if(ws&&ws.workspaceToken){window.open('${returnUrl}#plaud='+encodeURIComponent(ws.workspaceToken)+'&dom='+encodeURIComponent(ws.domain||''),'_blank');}else{alert('PLAUDにログインしてください');}}catch(e){alert('Error: '+e);}})();`;
+  document.getElementById('bookmarkletLink').href = js;
+}
+
+function initFromHash() {
+  // URLハッシュからPLAUDトークンを自動取得
+  const hash = window.location.hash;
+  if (!hash.includes('plaud=')) return;
+  const params = new URLSearchParams(hash.slice(1));
+  const token = params.get('plaud');
+  const domain = params.get('dom');
+  if (!token) return;
+
+  // URLをきれいにする
+  history.replaceState(null, '', window.location.pathname);
+
+  plaudToken = token;
+  if (domain) plaudApiBase = decodeURIComponent(domain);
+
+  // TOKEN タブに切り替えてトークンを表示
+  switchPlaudTab('token');
+  document.getElementById('plaudTokenInput').value = token;
+  updatePlaudDot();
+
+  // 自動接続
+  const status = document.getElementById('plaudStatus');
+  status.textContent = '>> PLAUD TOKEN RECEIVED — CONNECTING...';
+  status.className = 'plaud-status loading';
+  crtLog('>> PLAUD TOKEN AUTO-RECEIVED', 'ok');
+
+  connectPlaud();
 }
 
 function updatePlaudDot() {
@@ -1289,6 +1391,10 @@ async function loadForWhisper(fileId, fileName) {
   }
 }
 // ──────────────────────────────────────────────────────
+
+// 起動時処理
+initBookmarklet();
+initFromHash();
 
 // Drag & Drop
 const dz = document.getElementById('dropZone');
