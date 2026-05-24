@@ -816,6 +816,7 @@ h1 .accent { color: var(--amber); }
         <select class="param-select" id="plaudRegion" style="min-width:auto; font-size:10px; padding:4px 8px;">
           <option value="us">REGION: US</option>
           <option value="eu">REGION: EU</option>
+          <option value="apne1" selected>REGION: JP</option>
         </select>
         <button class="plaud-connect-btn" id="plaudConnectBtn" onclick="connectPlaud()">▶ LINK</button>
       </div>
@@ -968,7 +969,7 @@ let lastResult = '';
 let lastTranslation = '';
 
 // ── PLAUD ─────────────────────────────────────────────
-const PLAUD_BASE = { us: 'https://api.plaud.ai', eu: 'https://api-euc1.plaud.ai' };
+const PLAUD_BASE = { us: 'https://api.plaud.ai', eu: 'https://api-euc1.plaud.ai', apne1: 'https://api-apne1.plaud.ai' };
 let plaudToken = '';
 
 function updatePlaudDot() {
