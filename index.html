@@ -909,6 +909,7 @@ h1 .accent { color: var(--amber); }
           <div class="api-row">
             <span class="api-tag">PASS</span>
             <input class="api-input" type="password" id="plaudPassword" placeholder="••••••••">
+            <button onclick="togglePass()" id="passToggle" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:0 4px;line-height:1;" title="パスワードを表示">👁</button>
           </div>
         </div>
         <div class="plaud-controls">
@@ -1148,6 +1149,18 @@ function initFromHash() {
   crtLog('>> PLAUD TOKEN AUTO-RECEIVED', 'ok');
 
   connectPlaud();
+}
+
+function togglePass() {
+  const input = document.getElementById('plaudPassword');
+  const btn = document.getElementById('passToggle');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.style.opacity = '1';
+  } else {
+    input.type = 'password';
+    btn.style.opacity = '0.4';
+  }
 }
 
 function updatePlaudDot() {
