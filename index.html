@@ -1322,6 +1322,12 @@ async function loginPlaud() {
     document.getElementById('plaudTokenInput').value = data.token;
     localStorage.setItem('mojioko_plaud_token', data.token);
     localStorage.setItem('mojioko_plaud_domain', plaudApiBase);
+    // TOKENタブに切り替えて👁で表示
+    switchPlaudTab('token');
+    const ti = document.getElementById('plaudTokenInput');
+    ti.type = 'text';
+    document.getElementById('plaudTokenToggle').style.opacity = '1';
+    updatePlaudDot();
   } catch(e) {
     status.textContent = `ERR: ${e.message}`;
     status.className = 'plaud-status err';
