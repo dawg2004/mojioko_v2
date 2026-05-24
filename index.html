@@ -637,6 +637,114 @@ h1 .accent { color: var(--amber); }
 
 .toast.show { opacity: 1; transform: translateY(0); }
 
+/* PLAUD Connect */
+.plaud-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.plaud-connect-btn {
+  background: var(--panel3);
+  border: 1px solid var(--green-dim);
+  color: var(--green);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  padding: 5px 14px;
+  cursor: pointer;
+  letter-spacing: 0.12em;
+  transition: all 0.2s;
+  flex: 1;
+  text-align: center;
+}
+
+.plaud-connect-btn:hover { border-color: var(--green-bright); background: rgba(76,175,80,0.06); }
+.plaud-connect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.plaud-status {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 6px;
+  min-height: 16px;
+  letter-spacing: 0.05em;
+}
+
+.plaud-status.ok { color: var(--green-bright); }
+.plaud-status.err { color: var(--red-bright); }
+.plaud-status.loading { color: var(--amber); }
+
+.recordings-list {
+  display: none;
+  margin-top: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  background: var(--panel3);
+}
+
+.recordings-list.visible { display: block; }
+
+.rec-list-header {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--amber-dim);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel3);
+  position: sticky;
+  top: 0;
+}
+
+.recording-item {
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+  transition: background 0.1s;
+}
+
+.recording-item:hover { background: rgba(255,255,255,0.02); }
+.recording-item:last-child { border-bottom: none; }
+
+.rec-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.rec-date {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.rec-actions { display: flex; gap: 4px; }
+
+.rec-btn {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  padding: 3px 7px;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  transition: all 0.15s;
+  flex: 1;
+  text-align: center;
+}
+
+.rec-btn.transcript { border-color: var(--green-dim); color: var(--green); }
+.rec-btn.transcript:hover { background: rgba(76,175,80,0.1); border-color: var(--green); }
+.rec-btn.whisper { border-color: var(--amber-dim); color: var(--amber); }
+.rec-btn.whisper:hover { background: rgba(212,134,10,0.08); border-color: var(--amber); }
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--panel3); }
@@ -692,6 +800,27 @@ h1 .accent { color: var(--amber); }
         <input class="api-input" type="password" id="apiKey" placeholder="sk-proj-..." oninput="updateApiDot()">
         <div class="api-dot" id="apiDot"></div>
       </div>
+
+      <!-- PLAUD Connect -->
+      <div class="section-divider">
+        <div class="divider-line"></div>
+        <span class="divider-text">PLAUD LINK</span>
+        <div class="divider-line"></div>
+      </div>
+      <div class="api-row">
+        <span class="api-tag">PLAUD_TKN</span>
+        <input class="api-input" type="password" id="plaudTokenInput" placeholder="Bearer token..." oninput="updatePlaudDot()">
+        <div class="api-dot" id="plaudDot"></div>
+      </div>
+      <div class="plaud-controls">
+        <select class="param-select" id="plaudRegion" style="min-width:auto; font-size:10px; padding:4px 8px;">
+          <option value="us">REGION: US</option>
+          <option value="eu">REGION: EU</option>
+        </select>
+        <button class="plaud-connect-btn" id="plaudConnectBtn" onclick="connectPlaud()">▶ LINK</button>
+      </div>
+      <div class="plaud-status" id="plaudStatus">// AWAITING TOKEN</div>
+      <div class="recordings-list" id="recordingsList"></div>
 
       <!-- File Upload -->
       <div class="section-divider">
@@ -837,6 +966,168 @@ h1 .accent { color: var(--amber); }
 let currentFile = null;
 let lastResult = '';
 let lastTranslation = '';
+
+// ── PLAUD ─────────────────────────────────────────────
+const PLAUD_BASE = { us: 'https://api.plaud.ai', eu: 'https://api-euc1.plaud.ai' };
+let plaudToken = '';
+
+function updatePlaudDot() {
+  plaudToken = document.getElementById('plaudTokenInput').value.trim();
+  document.getElementById('plaudDot').classList.toggle('ok', plaudToken.length > 20);
+}
+
+async function plaudFetch(path) {
+  const region = document.getElementById('plaudRegion').value || 'us';
+  const base = PLAUD_BASE[region];
+  const res = await fetch(base + path, {
+    headers: { 'Authorization': `Bearer ${plaudToken}` }
+  });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { const j = await res.json(); msg = j.message || j.msg || msg; } catch(e) {}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+async function connectPlaud() {
+  plaudToken = document.getElementById('plaudTokenInput').value.trim();
+  const status = document.getElementById('plaudStatus');
+  const btn = document.getElementById('plaudConnectBtn');
+  if (!plaudToken) {
+    status.textContent = 'ERR: NO TOKEN SET';
+    status.className = 'plaud-status err';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'LINKING...';
+  status.textContent = '>> AUTHENTICATING...';
+  status.className = 'plaud-status loading';
+  try {
+    const data = await plaudFetch('/user/me');
+    const user = (data.data && (data.data.data_user || data.data)) || data;
+    const name = user.nickname || user.email || 'USER';
+    status.textContent = `OK // ${name}`;
+    status.className = 'plaud-status ok';
+    crtLog(`PLAUD LINKED: ${name}`, 'ok');
+    await loadRecordings();
+  } catch(e) {
+    status.textContent = `ERR: ${e.message}`;
+    status.className = 'plaud-status err';
+    crtLog(`PLAUD ERR: ${e.message}`, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ LINK';
+  }
+}
+
+async function loadRecordings() {
+  const list = document.getElementById('recordingsList');
+  list.classList.add('visible');
+  list.innerHTML = '<div class="rec-list-header">LOADING RECORDS...</div>';
+  try {
+    const data = await plaudFetch('/file/simple/web');
+    // Try multiple response shapes
+    const files = (data.data && (data.data.data_file_list || data.data.list || data.data)) ||
+                  data.data_file_list || data.list || [];
+    const arr = Array.isArray(files) ? files : [];
+    if (!arr.length) {
+      list.innerHTML = '<div class="rec-list-header">NO RECORDS FOUND</div>';
+      return;
+    }
+    list.innerHTML = `<div class="rec-list-header">RECORDS // ${arr.length} FILES</div>`;
+    arr.slice(0, 30).forEach(f => {
+      const id = f.id || f.file_id || '';
+      const rawName = f.file_name || f.name || `REC-${id}`;
+      const safeName = rawName.replace(/['"]/g, '');
+      const date = f.gmt_create
+        ? new Date(f.gmt_create).toLocaleDateString('ja-JP', { year:'numeric', month:'2-digit', day:'2-digit' })
+        : (f.create_time || '—');
+      const div = document.createElement('div');
+      div.className = 'recording-item';
+      div.innerHTML = `
+        <div class="rec-name" title="${safeName}">${safeName}</div>
+        <div class="rec-date">${date}</div>
+        <div class="rec-actions">
+          <button class="rec-btn transcript" onclick="getPlaudTranscript('${id}','${safeName}')">GET TRANSCRIPT</button>
+          <button class="rec-btn whisper" onclick="loadForWhisper('${id}','${safeName}')">WHISPER ▶</button>
+        </div>`;
+      list.appendChild(div);
+    });
+    crtLog(`RECORDS LOADED: ${arr.length} FILES`, 'bright');
+  } catch(e) {
+    list.innerHTML = `<div style="padding:10px;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--red-bright);">ERR: ${e.message}</div>`;
+    crtLog(`RECORDS ERR: ${e.message}`, 'err');
+  }
+}
+
+async function getPlaudTranscript(fileId, fileName) {
+  crtLog(`>> FETCHING TRANSCRIPT: ${fileName}`, 'warn');
+  document.getElementById('mStatus').textContent = 'PROC';
+  document.getElementById('errorBlock').classList.remove('visible');
+  document.getElementById('translationBlock').classList.remove('visible');
+  try {
+    const data = await plaudFetch(`/file/detail/${fileId}`);
+    const detail = (data.data && (data.data.data_file || data.data)) || data.data || data;
+    let text = '';
+    // Extract transcript from various possible fields
+    if (detail.pre_download_content_list && detail.pre_download_content_list.length) {
+      text = detail.pre_download_content_list
+        .map(item => item.content || item.text || '')
+        .filter(Boolean).join('\n');
+    } else if (detail.transcript) {
+      text = typeof detail.transcript === 'string' ? detail.transcript : JSON.stringify(detail.transcript, null, 2);
+    } else if (detail.content) {
+      text = detail.content;
+    } else {
+      // Show raw JSON as fallback
+      text = JSON.stringify(detail, null, 2);
+    }
+    lastResult = text;
+    document.getElementById('outputArea').textContent = text;
+    const chars = text.length;
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    document.getElementById('mChars').textContent = chars;
+    document.getElementById('mWords').textContent = words;
+    document.getElementById('mStatus').textContent = 'OK';
+    crtLog(`TRANSCRIPT OK // CHARS:${chars} WORDS:${words}`, 'ok');
+    toast(`PLAUD TRANSCRIPT: ${fileName}`);
+  } catch(e) {
+    document.getElementById('mStatus').textContent = 'FAIL';
+    crtLog(`TRANSCRIPT ERR: ${e.message}`, 'err');
+    showError('PLAUD ERR: ' + e.message);
+  }
+}
+
+async function loadForWhisper(fileId, fileName) {
+  crtLog(`>> FETCHING AUDIO URL: ${fileName}`, 'warn');
+  document.getElementById('mStatus').textContent = 'DL';
+  document.getElementById('errorBlock').classList.remove('visible');
+  try {
+    const urlData = await plaudFetch(`/file/temp-url/${fileId}?is_opus=false`);
+    const mp3Url = (urlData.data && (urlData.data.url || urlData.data.download_url)) ||
+                   urlData.url || urlData.download_url;
+    if (!mp3Url) throw new Error('NO DOWNLOAD URL');
+    crtLog(`>> DOWNLOADING AUDIO...`, '');
+    const audioRes = await fetch(mp3Url);
+    if (!audioRes.ok) throw new Error(`DOWNLOAD FAIL: HTTP ${audioRes.status}`);
+    const blob = await audioRes.blob();
+    currentFile = new File([blob], `${fileName}.mp3`, { type: 'audio/mpeg' });
+    document.getElementById('fileLoaded').classList.add('visible');
+    document.getElementById('fName').textContent = currentFile.name;
+    document.getElementById('fSize').textContent = fmtSize(currentFile.size);
+    document.getElementById('mFileSize').textContent = fmtSize(currentFile.size);
+    document.getElementById('mStatus').textContent = 'READY';
+    crtLog(`AUDIO LOADED: ${fmtSize(currentFile.size)}`, 'ok');
+    crtLog(`>> READY — PRESS EXECUTE FOR WHISPER`, 'bright');
+    toast(`音声ロード完了 // EXECUTE を押してください`);
+  } catch(e) {
+    document.getElementById('mStatus').textContent = 'FAIL';
+    crtLog(`AUDIO ERR: ${e.message}`, 'err');
+    showError('AUDIO ERR: ' + e.message);
+  }
+}
+// ──────────────────────────────────────────────────────
 
 // Drag & Drop
 const dz = document.getElementById('dropZone');
