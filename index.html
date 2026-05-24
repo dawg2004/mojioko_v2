@@ -662,6 +662,39 @@ h1 .accent { color: var(--amber); }
 .plaud-connect-btn:hover { border-color: var(--green-bright); background: rgba(76,175,80,0.06); }
 .plaud-connect-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.plaud-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+}
+
+.plaud-tab {
+  flex: 1;
+  background: var(--panel3);
+  border: none;
+  color: var(--text-dim);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  padding: 7px 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+  border-right: 1px solid var(--border);
+}
+
+.plaud-tab:last-child { border-right: none; }
+.plaud-tab.active { background: rgba(76,175,80,0.08); color: var(--green); border-bottom: 1px solid var(--green); }
+.plaud-tab:hover:not(.active) { color: var(--text); }
+
+.plaud-form { display: block; }
+.plaud-form.hidden { display: none; }
+
+.plaud-input-row {
+  margin-bottom: 6px;
+}
+
 .plaud-status {
   font-family: 'Share Tech Mono', monospace;
   font-size: 10px;
@@ -807,20 +840,55 @@ h1 .accent { color: var(--amber); }
         <span class="divider-text">PLAUD LINK</span>
         <div class="divider-line"></div>
       </div>
-      <div class="api-row">
-        <span class="api-tag">PLAUD_TKN</span>
-        <input class="api-input" type="password" id="plaudTokenInput" placeholder="Bearer token..." oninput="updatePlaudDot()">
-        <div class="api-dot" id="plaudDot"></div>
+
+      <div class="plaud-tabs">
+        <button class="plaud-tab active" id="tabLogin" onclick="switchPlaudTab('login')">LOGIN</button>
+        <button class="plaud-tab" id="tabToken" onclick="switchPlaudTab('token')">TOKEN</button>
       </div>
-      <div class="plaud-controls">
-        <select class="param-select" id="plaudRegion" style="min-width:auto; font-size:10px; padding:4px 8px;">
-          <option value="us">REGION: US</option>
-          <option value="eu">REGION: EU</option>
-          <option value="apne1" selected>REGION: JP</option>
-        </select>
-        <button class="plaud-connect-btn" id="plaudConnectBtn" onclick="connectPlaud()">▶ LINK</button>
+
+      <!-- Login form -->
+      <div class="plaud-form" id="plaudLoginForm">
+        <div class="plaud-input-row">
+          <div class="api-row">
+            <span class="api-tag">EMAIL</span>
+            <input class="api-input" type="email" id="plaudEmail" placeholder="you@example.com">
+          </div>
+        </div>
+        <div class="plaud-input-row">
+          <div class="api-row">
+            <span class="api-tag">PASS</span>
+            <input class="api-input" type="password" id="plaudPassword" placeholder="••••••••">
+          </div>
+        </div>
+        <div class="plaud-controls">
+          <select class="param-select" id="plaudRegion" style="min-width:auto; font-size:10px; padding:4px 8px;">
+            <option value="auto" selected>REGION: AUTO</option>
+            <option value="us">REGION: US</option>
+            <option value="eu">REGION: EU</option>
+            <option value="apne1">REGION: JP</option>
+          </select>
+          <button class="plaud-connect-btn" id="plaudLoginBtn" onclick="loginPlaud()">▶ LOGIN</button>
+        </div>
       </div>
-      <div class="plaud-status" id="plaudStatus">// AWAITING TOKEN</div>
+
+      <!-- Token form (advanced) -->
+      <div class="plaud-form hidden" id="plaudTokenForm">
+        <div class="api-row">
+          <span class="api-tag">TOKEN</span>
+          <input class="api-input" type="password" id="plaudTokenInput" placeholder="Bearer token..." oninput="updatePlaudDot()">
+          <div class="api-dot" id="plaudDot"></div>
+        </div>
+        <div class="plaud-controls">
+          <select class="param-select" id="plaudRegionToken" style="min-width:auto; font-size:10px; padding:4px 8px;">
+            <option value="us">REGION: US</option>
+            <option value="eu">REGION: EU</option>
+            <option value="apne1" selected>REGION: JP</option>
+          </select>
+          <button class="plaud-connect-btn" id="plaudConnectBtn" onclick="connectPlaud()">▶ LINK</button>
+        </div>
+      </div>
+
+      <div class="plaud-status" id="plaudStatus">// AWAITING LOGIN</div>
       <div class="recordings-list" id="recordingsList"></div>
 
       <!-- File Upload -->
@@ -971,6 +1039,14 @@ let lastTranslation = '';
 // ── PLAUD ─────────────────────────────────────────────
 const PLAUD_BASE = { us: 'https://api.plaud.ai', eu: 'https://api-euc1.plaud.ai', apne1: 'https://api-apne1.plaud.ai' };
 let plaudToken = '';
+let plaudApiBase = 'https://api-apne1.plaud.ai';
+
+function switchPlaudTab(tab) {
+  document.getElementById('plaudLoginForm').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('plaudTokenForm').classList.toggle('hidden', tab !== 'token');
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabToken').classList.toggle('active', tab === 'token');
+}
 
 function updatePlaudDot() {
   plaudToken = document.getElementById('plaudTokenInput').value.trim();
@@ -978,9 +1054,7 @@ function updatePlaudDot() {
 }
 
 async function plaudFetch(path) {
-  const region = document.getElementById('plaudRegion').value || 'us';
-  const base = PLAUD_BASE[region];
-  const res = await fetch(base + path, {
+  const res = await fetch(plaudApiBase + path, {
     headers: { 'Authorization': `Bearer ${plaudToken}` }
   });
   if (!res.ok) {
@@ -991,8 +1065,90 @@ async function plaudFetch(path) {
   return res.json();
 }
 
+async function loginPlaud() {
+  const email = document.getElementById('plaudEmail').value.trim();
+  const password = document.getElementById('plaudPassword').value;
+  const status = document.getElementById('plaudStatus');
+  const btn = document.getElementById('plaudLoginBtn');
+
+  if (!email || !password) {
+    status.textContent = 'ERR: EMAIL / PASSWORD REQUIRED';
+    status.className = 'plaud-status err';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'LOGGING IN...';
+  status.textContent = '>> AUTHENTICATING...';
+  status.className = 'plaud-status loading';
+
+  const regionSel = document.getElementById('plaudRegion').value;
+  const tryList = regionSel === 'auto'
+    ? ['apne1', 'us', 'eu']
+    : [regionSel];
+
+  let success = false;
+  for (const r of tryList) {
+    const base = PLAUD_BASE[r];
+    try {
+      crtLog(`>> TRYING REGION: ${r.toUpperCase()}...`, '');
+      const res = await fetch(`${base}/auth/access-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ username: email, password })
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const token = data.access_token || data.data?.access_token;
+      if (!token) continue;
+      plaudToken = token;
+      plaudApiBase = base;
+      // Try to get actual workspace domain
+      try {
+        const wsRes = await fetch(`${base}/user/workspace/list`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r2 => r2.json());
+        const ws = wsRes.data?.list?.[0] || wsRes.data?.[0];
+        if (ws?.domain) { plaudApiBase = ws.domain; }
+        if (ws?.workspaceToken) { plaudToken = ws.workspaceToken; }
+      } catch(e) { /* use base token */ }
+      success = true;
+      break;
+    } catch(e) {
+      crtLog(`>> ${r.toUpperCase()} FAILED: ${e.message}`, 'err');
+    }
+  }
+
+  if (!success) {
+    status.textContent = 'ERR: LOGIN FAILED — CHECK EMAIL / PASSWORD';
+    status.className = 'plaud-status err';
+    btn.disabled = false;
+    btn.textContent = '▶ LOGIN';
+    return;
+  }
+
+  try {
+    const data = await plaudFetch('/user/me');
+    const user = (data.data && (data.data.data_user || data.data)) || data;
+    const name = user.nickname || user.email || email;
+    status.textContent = `OK // ${name}`;
+    status.className = 'plaud-status ok';
+    crtLog(`PLAUD LOGIN OK: ${name}`, 'ok');
+    await loadRecordings();
+  } catch(e) {
+    status.textContent = `LINKED // ${email}`;
+    status.className = 'plaud-status ok';
+    await loadRecordings();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ LOGIN';
+  }
+}
+
 async function connectPlaud() {
   plaudToken = document.getElementById('plaudTokenInput').value.trim();
+  const region = document.getElementById('plaudRegionToken').value || 'apne1';
+  plaudApiBase = PLAUD_BASE[region];
   const status = document.getElementById('plaudStatus');
   const btn = document.getElementById('plaudConnectBtn');
   if (!plaudToken) {
