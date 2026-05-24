@@ -958,11 +958,30 @@ h1 .accent { color: var(--amber); }
       <div class="plaud-tabs">
         <button class="plaud-tab active" id="tabLogin" onclick="switchPlaudTab('login')">PLAUD LOGIN</button>
         <button class="plaud-tab" id="tabToken" onclick="switchPlaudTab('token')">TOKEN</button>
-        <button class="plaud-tab" id="tabBookmark" onclick="switchPlaudTab('bookmark')">🔖 AUTO</button>
       </div>
 
       <!-- Login form -->
       <div class="plaud-form" id="plaudLoginForm">
+
+        <!-- Google login section -->
+        <button class="google-login-btn" onclick="openPlaudForGoogle()">
+          <span class="google-icon">G</span> Googleアカウントでログイン
+        </button>
+        <div id="googleStep2" style="display:none; margin-top:10px; padding:10px; border:1px solid rgba(255,180,0,0.3); border-radius:4px; background:rgba(255,180,0,0.05);">
+          <div style="font-size:10px; color:var(--amber); margin-bottom:8px;">② Googleログイン後、下のURLをコピーして<br>　app.plaud.ai のアドレスバーに貼り付けてEnter</div>
+          <div style="display:flex; gap:4px;">
+            <input class="api-input" type="text" id="bookmarkletUrlInput" readonly style="font-size:9px; color:var(--amber);">
+            <button onclick="copyBookmarkletUrl()" id="copyBmBtn" style="background:rgba(255,180,0,0.15);border:1px solid var(--amber);color:var(--amber);cursor:pointer;font-size:10px;padding:4px 8px;border-radius:2px;white-space:nowrap;min-width:60px;">COPY</button>
+          </div>
+          <div style="margin-top:8px; font-size:10px; color:var(--text-dim); text-align:center;">// PCの場合はドラッグして保存も可能</div>
+          <a class="bookmarklet-link" id="bookmarkletLink" href="#" style="display:block;margin-top:6px;text-align:center;" title="ブックマークバーにドラッグ">
+            📡 GET PLAUD TOKEN
+          </a>
+        </div>
+
+        <div class="login-divider"><span>またはメールで</span></div>
+
+        <!-- Email/password section -->
         <div class="plaud-input-row">
           <div class="api-row">
             <span class="api-tag">EMAIL</span>
@@ -986,7 +1005,6 @@ h1 .accent { color: var(--amber); }
             <button onclick="copyPlaudToken()" id="copyTokenBtn" style="background:rgba(76,175,80,0.15);border:1px solid var(--green);color:var(--green);cursor:pointer;font-size:10px;padding:4px 8px;border-radius:2px;white-space:nowrap;">COPY</button>
           </div>
         </div>
-        <div style="margin-top:8px; font-size:10px; color:var(--text-dim); text-align:center;">// Googleアカウントは 🔖 AUTO タブを使用</div>
       </div>
 
       <!-- Token form (advanced) -->
@@ -1007,19 +1025,8 @@ h1 .accent { color: var(--amber); }
         </div>
       </div>
 
-      <!-- Bookmarklet form -->
-      <div class="plaud-form hidden" id="plaudBookmarkForm">
-        <div class="bookmarklet-area">
-          <div class="bookmarklet-step" style="color:var(--amber);margin-bottom:10px;">// Googleアカウントはこちらから連携</div>
-          <div class="bookmarklet-step"><span class="step-num">01</span>下のボタンをブックマークバーに<br>　　ドラッグして保存</div>
-          <a class="bookmarklet-link" id="bookmarkletLink" href="#" title="ブックマークバーにドラッグしてください">
-            📡 GET PLAUD TOKEN
-          </a>
-          <div class="bookmarklet-step"><span class="step-num">02</span>保存したブックマークをクリック<br>　　→ app.plaud.ai が自動で開く</div>
-          <div class="bookmarklet-step"><span class="step-num">03</span>app.plaud.ai で<br>　　もう一度ブックマークをクリック<br>　　→ ここに自動で戻ります！</div>
-          <div class="bookmarklet-note">// スマホの場合はブックマークのURLを<br>JavaScriptコードに書き換えてください</div>
-        </div>
-      </div>
+      <!-- Hidden bookmarklet anchor (kept for initBookmarklet) -->
+      <div id="plaudBookmarkForm" style="display:none;"></div>
 
       <div class="plaud-status" id="plaudStatus">// AWAITING LOGIN</div>
       <div class="recordings-list" id="recordingsList"></div>
@@ -1180,14 +1187,29 @@ function switchPlaudTab(tab) {
   document.getElementById('plaudBookmarkForm').classList.toggle('hidden', tab !== 'bookmark');
   document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
   document.getElementById('tabToken').classList.toggle('active', tab === 'token');
-  document.getElementById('tabBookmark').classList.toggle('active', tab === 'bookmark');
 }
 
 function initBookmarklet() {
-  // ブックマークレットのhrefを動的に生成（現在のページURLに戻る）
   const returnUrl = window.location.origin + window.location.pathname;
-  const js = `javascript:(function(){if(!location.href.includes('plaud.ai')){window.open('https://app.plaud.ai','_blank');return;}try{var k=Object.keys(localStorage).find(function(k){return k.includes('workspaceList')});var ws=JSON.parse(localStorage[k]||'[]')[0];if(ws&&ws.workspaceToken){window.open('${returnUrl}#plaud='+encodeURIComponent(ws.workspaceToken)+'&dom='+encodeURIComponent(ws.domain||''),'_self');}else{alert('PLAUDにログインしてから再度クリックしてください');}}catch(e){alert('Error: '+e);}})();`;
-  document.getElementById('bookmarkletLink').href = js;
+  const js = `javascript:(function(){if(!location.href.includes('plaud.ai')){window.open('https://app.plaud.ai','_blank');return;}try{var k=Object.keys(localStorage).find(function(k){return k.includes('workspaceList')});var ws=JSON.parse(localStorage[k]||'[]')[0];if(ws&&ws.workspaceToken){location.href='${returnUrl}#plaud='+encodeURIComponent(ws.workspaceToken)+'&dom='+encodeURIComponent(ws.domain||'');}else{alert('PLAUDにGoogleログイン後、もう一度実行してください');}}catch(e){alert('Error: '+e);}})();`;
+  const el = document.getElementById('bookmarkletLink');
+  if (el) el.href = js;
+  const inp = document.getElementById('bookmarkletUrlInput');
+  if (inp) inp.value = js;
+}
+
+function openPlaudForGoogle() {
+  window.open('https://app.plaud.ai', '_blank');
+  document.getElementById('googleStep2').style.display = 'block';
+}
+
+function copyBookmarkletUrl() {
+  const js = document.getElementById('bookmarkletUrlInput').value;
+  navigator.clipboard.writeText(js).then(() => {
+    const btn = document.getElementById('copyBmBtn');
+    btn.textContent = '✓ COPIED';
+    setTimeout(() => { btn.textContent = 'COPY'; }, 2000);
+  });
 }
 
 function initFromHash() {
