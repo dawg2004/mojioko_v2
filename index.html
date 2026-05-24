@@ -1039,16 +1039,18 @@ async function loadRecordings() {
     list.innerHTML = `<div class="rec-list-header">RECORDS // ${arr.length} FILES</div>`;
     arr.slice(0, 30).forEach(f => {
       const id = f.id || f.file_id || '';
-      const rawName = f.file_name || f.name || `REC-${id}`;
+      const rawName = f.filename || f.file_name || f.name || `REC-${id}`;
       const safeName = rawName.replace(/['"]/g, '');
-      const date = f.gmt_create
-        ? new Date(f.gmt_create).toLocaleDateString('ja-JP', { year:'numeric', month:'2-digit', day:'2-digit' })
-        : (f.create_time || '—');
+      const ts = f.start_time || f.gmt_create || f.create_time;
+      const date = ts
+        ? new Date(ts).toLocaleDateString('ja-JP', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })
+        : '—';
+      const dur = f.duration ? ` | ${Math.floor(f.duration/60000)}m${Math.floor((f.duration%60000)/1000)}s` : '';
       const div = document.createElement('div');
       div.className = 'recording-item';
       div.innerHTML = `
         <div class="rec-name" title="${safeName}">${safeName}</div>
-        <div class="rec-date">${date}</div>
+        <div class="rec-date">${date}${dur}</div>
         <div class="rec-actions">
           <button class="rec-btn transcript" onclick="getPlaudTranscript('${id}','${safeName}')">GET TRANSCRIPT</button>
           <button class="rec-btn whisper" onclick="loadForWhisper('${id}','${safeName}')">WHISPER ▶</button>
@@ -1071,18 +1073,19 @@ async function getPlaudTranscript(fileId, fileName) {
     const data = await plaudFetch(`/file/detail/${fileId}`);
     const detail = (data.data && (data.data.data_file || data.data)) || data.data || data;
     let text = '';
-    // Extract transcript from various possible fields
-    if (detail.pre_download_content_list && detail.pre_download_content_list.length) {
-      text = detail.pre_download_content_list
-        .map(item => item.content || item.text || '')
-        .filter(Boolean).join('\n');
+    // Extract transcript from content_list or pre_download_content_list
+    const contentSrc = (detail.content_list && detail.content_list.length && detail.content_list) ||
+                       (detail.pre_download_content_list && detail.pre_download_content_list.length && detail.pre_download_content_list);
+    if (contentSrc) {
+      text = contentSrc.map(item => {
+        const speaker = item.speaker_id != null ? `[S${item.speaker_id}] ` : '';
+        return speaker + (item.content || item.text || '');
+      }).filter(Boolean).join('\n');
     } else if (detail.transcript) {
       text = typeof detail.transcript === 'string' ? detail.transcript : JSON.stringify(detail.transcript, null, 2);
-    } else if (detail.content) {
-      text = detail.content;
-    } else {
-      // Show raw JSON as fallback
-      text = JSON.stringify(detail, null, 2);
+    }
+    if (!text) {
+      text = '[PLAUD未文字起こし]\nWhisper ▶ ボタンで音声から直接文字起こしできます。';
     }
     lastResult = text;
     document.getElementById('outputArea').textContent = text;
@@ -1106,7 +1109,8 @@ async function loadForWhisper(fileId, fileName) {
   document.getElementById('errorBlock').classList.remove('visible');
   try {
     const urlData = await plaudFetch(`/file/temp-url/${fileId}?is_opus=false`);
-    const mp3Url = (urlData.data && (urlData.data.url || urlData.data.download_url)) ||
+    const mp3Url = urlData.temp_url ||
+                   (urlData.data && (urlData.data.temp_url || urlData.data.url || urlData.data.download_url)) ||
                    urlData.url || urlData.download_url;
     if (!mp3Url) throw new Error('NO DOWNLOAD URL');
     crtLog(`>> DOWNLOADING AUDIO...`, '');
