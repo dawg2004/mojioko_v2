@@ -995,7 +995,8 @@ h1 .accent { color: var(--amber); }
       <div class="plaud-form hidden" id="plaudTokenForm">
         <div class="api-row">
           <span class="api-tag">TOKEN</span>
-          <input class="api-input" type="password" id="plaudTokenInput" placeholder="Bearer token..." oninput="updatePlaudDot()">
+          <input class="api-input" type="password" id="plaudTokenInput" placeholder="Bearer token..." oninput="updatePlaudDot(); savePlaudToken()">
+          <button onclick="togglePlaudToken()" id="plaudTokenToggle" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;padding:0 4px;line-height:1;opacity:0.4;" title="トークンを表示">👁</button>
           <div class="api-dot" id="plaudDot"></div>
         </div>
         <div class="plaud-controls">
@@ -1204,7 +1205,12 @@ function initFromHash() {
   history.replaceState(null, '', window.location.pathname);
 
   plaudToken = token;
-  if (domain) plaudApiBase = decodeURIComponent(domain);
+  const decodedDomain = domain ? decodeURIComponent(domain) : '';
+  if (decodedDomain) plaudApiBase = decodedDomain;
+
+  // localStorageに保存
+  localStorage.setItem('mojioko_plaud_token', token);
+  if (decodedDomain) localStorage.setItem('mojioko_plaud_domain', decodedDomain);
 
   // TOKEN タブに切り替えてトークンを表示
   switchPlaudTab('token');
@@ -1229,6 +1235,37 @@ function togglePass() {
   } else {
     input.type = 'password';
     btn.style.opacity = '0.4';
+  }
+}
+
+function togglePlaudToken() {
+  const input = document.getElementById('plaudTokenInput');
+  const btn = document.getElementById('plaudTokenToggle');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.style.opacity = '1';
+  } else {
+    input.type = 'password';
+    btn.style.opacity = '0.4';
+  }
+}
+
+function savePlaudToken() {
+  const t = document.getElementById('plaudTokenInput').value.trim();
+  if (t) localStorage.setItem('mojioko_plaud_token', t);
+  else localStorage.removeItem('mojioko_plaud_token');
+}
+
+function loadPlaudToken() {
+  const t = localStorage.getItem('mojioko_plaud_token');
+  const d = localStorage.getItem('mojioko_plaud_domain');
+  if (t) {
+    document.getElementById('plaudTokenInput').value = t;
+    plaudToken = t;
+    if (d) plaudApiBase = d;
+    updatePlaudDot();
+    // 自動接続
+    connectPlaud();
   }
 }
 
@@ -1455,6 +1492,9 @@ async function loadForWhisper(fileId, fileName) {
 
 // 起動時処理
 initBookmarklet();
+if (!window.location.hash.includes('plaud=')) {
+  loadPlaudToken(); // ハッシュがない時だけ保存済みトークンを使う
+}
 initFromHash();
 loadApiKey();
 
