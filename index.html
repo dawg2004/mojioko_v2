@@ -945,10 +945,12 @@ h1 .accent { color: var(--amber); }
       <div class="api-row">
         <span class="api-tag">API_KEY</span>
         <input class="api-input" type="password" id="apiKey" placeholder="sk-proj-..." oninput="updateApiDot(); saveApiKey()">
-        <button onclick="saveApiKey(true)" style="background:rgba(76,175,80,0.15);border:1px solid var(--green);color:var(--green);cursor:pointer;font-size:10px;padding:4px 8px;border-radius:2px;white-space:nowrap;font-family:inherit;">💾 SAVE</button>
         <div class="api-dot" id="apiDot"></div>
       </div>
-      <div id="apiSavedMsg" style="display:none; font-size:10px; color:var(--green); text-align:right; margin-top:2px;">✓ 保存しました</div>
+      <div style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:4px;">
+        <span id="apiSavedMsg" style="display:none; font-size:10px; color:var(--green);">✓ 保存しました</span>
+        <button onclick="saveApiKey(true)" style="background:rgba(76,175,80,0.15);border:1px solid var(--green);color:var(--green);cursor:pointer;font-size:10px;padding:3px 10px;border-radius:2px;font-family:inherit;">💾 SAVE</button>
+      </div>
 
       <!-- PLAUD Connect -->
       <div class="section-divider">
@@ -1113,10 +1115,12 @@ h1 .accent { color: var(--amber); }
             <option value="eu">REGION: EU</option>
             <option value="apne1" selected>REGION: JP</option>
           </select>
-          <button onclick="savePlaudToken(true)" style="background:rgba(76,175,80,0.15);border:1px solid var(--green);color:var(--green);cursor:pointer;font-size:10px;padding:4px 8px;border-radius:2px;white-space:nowrap;font-family:inherit;">💾 SAVE</button>
           <button class="plaud-connect-btn" id="plaudConnectBtn" onclick="connectPlaud()">▶ LINK</button>
         </div>
-        <div id="plaudSavedMsg" style="display:none; font-size:10px; color:var(--green); text-align:right; margin-top:2px;">✓ 保存しました</div>
+        <div style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:4px;">
+          <span id="plaudSavedMsg" style="display:none; font-size:10px; color:var(--green);">✓ 保存しました</span>
+          <button onclick="savePlaudToken(true)" style="background:rgba(76,175,80,0.15);border:1px solid var(--green);color:var(--green);cursor:pointer;font-size:10px;padding:3px 10px;border-radius:2px;font-family:inherit;">💾 SAVE</button>
+        </div>
       </div>
 
       <!-- Hidden bookmarklet anchor (kept for initBookmarklet) -->
