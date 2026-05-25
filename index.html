@@ -945,8 +945,10 @@ h1 .accent { color: var(--amber); }
       <div class="api-row">
         <span class="api-tag">API_KEY</span>
         <input class="api-input" type="password" id="apiKey" placeholder="sk-proj-..." oninput="updateApiDot(); saveApiKey()">
+        <button onclick="saveApiKey(true)" style="background:rgba(76,175,80,0.15);border:1px solid var(--green);color:var(--green);cursor:pointer;font-size:10px;padding:4px 8px;border-radius:2px;white-space:nowrap;font-family:inherit;">💾 SAVE</button>
         <div class="api-dot" id="apiDot"></div>
       </div>
+      <div id="apiSavedMsg" style="display:none; font-size:10px; color:var(--green); text-align:right; margin-top:2px;">✓ 保存しました</div>
 
       <!-- PLAUD Connect -->
       <div class="section-divider">
@@ -1111,8 +1113,10 @@ h1 .accent { color: var(--amber); }
             <option value="eu">REGION: EU</option>
             <option value="apne1" selected>REGION: JP</option>
           </select>
+          <button onclick="savePlaudToken(true)" style="background:rgba(76,175,80,0.15);border:1px solid var(--green);color:var(--green);cursor:pointer;font-size:10px;padding:4px 8px;border-radius:2px;white-space:nowrap;font-family:inherit;">💾 SAVE</button>
           <button class="plaud-connect-btn" id="plaudConnectBtn" onclick="connectPlaud()">▶ LINK</button>
         </div>
+        <div id="plaudSavedMsg" style="display:none; font-size:10px; color:var(--green); text-align:right; margin-top:2px;">✓ 保存しました</div>
       </div>
 
       <!-- Hidden bookmarklet anchor (kept for initBookmarklet) -->
@@ -1382,10 +1386,15 @@ function copyPlaudToken() {
   });
 }
 
-function savePlaudToken() {
+function savePlaudToken(showMsg) {
   const t = document.getElementById('plaudTokenInput').value.trim();
   if (t) localStorage.setItem('mojioko_plaud_token', t);
   else localStorage.removeItem('mojioko_plaud_token');
+  if (showMsg) {
+    const msg = document.getElementById('plaudSavedMsg');
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 2000);
+  }
 }
 
 function loadPlaudToken() {
@@ -1672,10 +1681,15 @@ function clearFile() {
   crtLog('FILE BUFFER CLEARED', 'warn');
 }
 
-function saveApiKey() {
+function saveApiKey(showMsg) {
   const k = document.getElementById('apiKey').value.trim();
   if (k) localStorage.setItem('mojioko_apikey', k);
   else localStorage.removeItem('mojioko_apikey');
+  if (showMsg) {
+    const msg = document.getElementById('apiSavedMsg');
+    msg.style.display = 'block';
+    setTimeout(() => { msg.style.display = 'none'; }, 2000);
+  }
 }
 
 function loadApiKey() {
