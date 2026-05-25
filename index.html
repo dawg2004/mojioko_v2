@@ -984,7 +984,7 @@ h1 .accent { color: var(--amber); }
       </div>
       <div class="api-row">
         <span class="api-tag">API_KEY</span>
-        <input class="api-input" type="password" id="apiKey" placeholder="sk-proj-..." oninput="updateApiDot(); saveApiKey()">
+        <input class="api-input" type="password" id="apiKey" placeholder="sk-proj-... または gsk_..." oninput="updateApiDot(); saveApiKey()">
         <div class="api-dot" id="apiDot"></div>
       </div>
       <div style="display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:4px;">
@@ -1835,15 +1835,29 @@ async function execute() {
   crtLog('>> TRANSMITTING AUDIO SIGNAL...', 'warn');
   crtLog(`>> MODE: ${mode.toUpperCase()} | FMT: ${fmt.toUpperCase()} | LANG: ${lang.toUpperCase()}`, '');
 
-  const endpoint = mode === 'translate'
-    ? 'https://api.openai.com/v1/audio/translations'
-    : 'https://api.openai.com/v1/audio/transcriptions';
+  // Groq (gsk_) か OpenAI (sk-) かを自動判定
+  const isGroq = apiKey.startsWith('gsk_');
+  let endpoint, model;
+  if (isGroq) {
+    // Groq は translate 非対応 → transcribe にフォールバック
+    endpoint = 'https://api.groq.com/openai/v1/audio/transcriptions';
+    model = 'whisper-large-v3-turbo';
+    if (mode === 'translate') {
+      crtLog('>> GROQ: translate非対応 → transcribeで実行', 'warn');
+    }
+  } else {
+    endpoint = mode === 'translate'
+      ? 'https://api.openai.com/v1/audio/translations'
+      : 'https://api.openai.com/v1/audio/transcriptions';
+    model = 'whisper-1';
+  }
+  crtLog(`>> ENGINE: ${isGroq ? 'GROQ (whisper-large-v3-turbo / FREE)' : 'OPENAI (whisper-1)'}`, '');
 
   const form = new FormData();
   form.append('file', currentFile);
-  form.append('model', 'whisper-1');
+  form.append('model', model);
   form.append('response_format', fmt);
-  if (mode === 'transcribe' && lang !== 'auto') form.append('language', lang);
+  if (lang !== 'auto') form.append('language', lang);
 
   try {
     animProgress(40, 80, 1200);
