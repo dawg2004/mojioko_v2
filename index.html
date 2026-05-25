@@ -968,19 +968,20 @@ h1 .accent { color: var(--amber); }
           <span class="google-icon">G</span> Googleアカウントでログイン
         </button>
         <div id="googleStep2" style="display:none; margin-top:10px; padding:10px; border:1px solid rgba(255,180,0,0.3); border-radius:4px; background:rgba(255,180,0,0.05);">
-          <div style="font-size:11px; color:var(--amber); margin-bottom:8px; line-height:1.6;">
-            ② app.plaud.ai でGoogleログイン後<br>
-            　下の <b>COPY</b> を押してアドレスバーに貼り付け → Enter<br>
-            　<span style="color:var(--green);">→ mojiokoに自動で戻って接続完了！</span>
+          <div style="font-size:11px; color:var(--amber); margin-bottom:10px; line-height:1.8;">
+            <span style="color:var(--green); font-weight:bold;">② </span>app.plaud.ai でGoogleログイン後<br>
+            <span style="color:var(--green); font-weight:bold;">③ </span>下のボタンを<b>ブックマークバーにドラッグ</b>して保存<br>
+            <span style="color:var(--green); font-weight:bold;">④ </span>app.plaud.ai のタブでそのブックマークをクリック<br>
+            　　<span style="color:var(--green);">→ mojiokoが自動で開いて接続完了！</span>
           </div>
-          <div style="display:flex; gap:4px;">
-            <input class="api-input" type="text" id="bookmarkletUrlInput" readonly style="font-size:9px; color:var(--amber);">
-            <button onclick="copyBookmarkletUrl()" id="copyBmBtn" style="background:rgba(255,180,0,0.15);border:1px solid var(--amber);color:var(--amber);cursor:pointer;font-size:10px;padding:4px 8px;border-radius:2px;white-space:nowrap;min-width:60px;">COPY</button>
-          </div>
-          <div style="margin-top:8px; font-size:10px; color:var(--text-dim); text-align:center;">// PCはドラッグしてブックマーク保存も可能</div>
-          <a class="bookmarklet-link" id="bookmarkletLink" href="#" style="display:block;margin-top:6px;text-align:center;" title="ブックマークバーにドラッグ">
-            📡 GET PLAUD TOKEN
+          <a class="bookmarklet-link" id="bookmarkletLink" href="#" title="ここをブックマークバーにドラッグ！">
+            📡 GET PLAUD TOKEN ← ドラッグして保存
           </a>
+          <div style="margin-top:10px; padding:8px; background:rgba(0,0,0,0.3); border-radius:4px; font-size:10px; color:var(--text-dim); line-height:1.6;">
+            ⚠️ アドレスバーへの貼り付けはChromeでは動きません<br>
+            📱 スマホはSafariを推奨（Chromeは非対応）
+          </div>
+          <input type="hidden" id="bookmarkletUrlInput">
         </div>
 
         <div class="login-divider"><span>またはメールで</span></div>
