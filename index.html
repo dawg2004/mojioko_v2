@@ -975,6 +975,24 @@ h1 .accent { color: var(--amber); }
           <div style="color:var(--text-dim); font-size:10px; margin-top:4px; text-align:center;">設定後は下の「メールでログイン」が使えます</div>
         </div>
 
+        <!-- DevTools コンソール方法（PC向け簡単） -->
+        <details style="margin-bottom:6px;">
+          <summary style="cursor:pointer; padding:8px 10px; background:rgba(100,150,255,0.08); border:1px solid rgba(100,150,255,0.25); border-radius:6px; font-size:11px; color:#aab4ff; list-style:none; user-select:none;">
+            💻 PCで今すぐ試す（DevToolsコンソール）▼
+          </summary>
+          <div style="padding:10px; border:1px solid rgba(100,150,255,0.2); border-top:none; border-radius:0 0 6px 6px; font-size:10px; line-height:1.9; color:var(--text-dim);">
+            <div><b style="color:#aab4ff;">① </b><a href="https://web.plaud.ai" target="_blank" style="color:#aab4ff;">web.plaud.ai</a> でGoogleログイン</div>
+            <div><b style="color:#aab4ff;">② </b>F12キーでDevToolsを開く → <b>Console</b>タブ</div>
+            <div><b style="color:#aab4ff;">③ </b>下のコードをコピーして貼り付けEnter</div>
+            <div style="display:flex; gap:4px; margin:6px 0;">
+              <input class="api-input" id="consoleSnippet" readonly value="JSON.parse(localStorage[Object.keys(localStorage).find(k=>k.includes('workspaceList'))]||'[]')[0]?.workspaceToken" style="font-size:9px; color:#aab4ff; font-family:monospace;">
+              <button onclick="copyConsoleSnippet()" id="copySnippetBtn" style="background:rgba(100,150,255,0.15);border:1px solid #aab4ff;color:#aab4ff;cursor:pointer;font-size:10px;padding:4px 8px;border-radius:2px;white-space:nowrap;">COPY</button>
+            </div>
+            <div><b style="color:#aab4ff;">④ </b>表示されたトークンをコピー</div>
+            <div><b style="color:#aab4ff;">⑤ </b>mojiokoの <b>TOKEN</b> タブに貼り付け → ▶ LINK</div>
+          </div>
+        </details>
+
         <!-- 上級者向け: ブックマークレット -->
         <button class="google-login-btn" onclick="openPlaudForGoogle()" style="opacity:0.7; font-size:11px;">
           <span class="google-icon" style="font-size:12px;">G</span> PCブラウザでブックマークを使う（上級者向け）
@@ -1271,7 +1289,7 @@ function initBookmarklet() {
 }
 
 function openPlaudForGoogle() {
-  window.open('https://app.plaud.ai', '_blank');
+  window.open('https://web.plaud.ai', '_blank');
   document.getElementById('googleStep2').style.display = 'block';
 }
 
@@ -1340,6 +1358,15 @@ function togglePlaudToken() {
     input.type = 'password';
     btn.style.opacity = '0.4';
   }
+}
+
+function copyConsoleSnippet() {
+  const t = document.getElementById('consoleSnippet').value;
+  navigator.clipboard.writeText(t).then(() => {
+    const btn = document.getElementById('copySnippetBtn');
+    btn.textContent = '✓ COPIED';
+    setTimeout(() => { btn.textContent = 'COPY'; }, 2000);
+  });
 }
 
 function copyPlaudToken() {
