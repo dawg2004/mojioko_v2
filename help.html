@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLAUDトークン取得方法 // mojioko</title>
+<style>
+  :root {
+    --bg: #0a0c0a;
+    --surface: #111411;
+    --border: #1e241e;
+    --green: #4caf50;
+    --green-bright: #69f069;
+    --amber: #ffb400;
+    --blue: #aab4ff;
+    --text: #c8d0c8;
+    --text-dim: #5a665a;
+    --red: #ff5252;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    padding: 24px 16px 60px;
+    max-width: 680px;
+    margin: 0 auto;
+  }
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+    margin-bottom: 28px;
+  }
+  .header a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 11px;
+  }
+  .header a:hover { color: var(--green); }
+  h1 { color: var(--green-bright); font-size: 18px; margin-top: 8px; letter-spacing: 2px; }
+  h2 { color: var(--amber); font-size: 13px; letter-spacing: 1px; margin: 32px 0 12px; }
+
+  .step {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    margin-bottom: 2px;
+  }
+  .step:first-of-type { border-radius: 6px 6px 0 0; }
+  .step:last-of-type  { border-radius: 0 0 6px 6px; margin-bottom: 0; }
+  .step-num {
+    background: var(--amber);
+    color: #000;
+    font-weight: bold;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    margin-top: 2px;
+    min-width: 36px;
+    text-align: center;
+  }
+  .step-body { flex: 1; }
+  .step-title { color: var(--text); font-size: 13px; margin-bottom: 3px; }
+  .step-note  { color: var(--text-dim); font-size: 11px; }
+
+  .arrow {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 18px;
+    line-height: 1;
+    margin: 0;
+    padding: 2px 0;
+  }
+
+  .code-block {
+    background: #0d1a0d;
+    border: 1px solid var(--green);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 16px 0;
+    position: relative;
+  }
+  .code-block code {
+    color: var(--green-bright);
+    font-size: 12px;
+    word-break: break-all;
+    display: block;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(76,175,80,0.15);
+    border: 1px solid var(--green);
+    color: var(--green);
+    cursor: pointer;
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+  }
+  .copy-btn:hover { background: rgba(76,175,80,0.3); }
+
+  .screen {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 12px 0;
+    font-size: 11px;
+  }
+  .screen-bar {
+    background: #1a1a1a;
+    padding: 6px 10px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .screen-bar .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .screen-body {
+    background: #111;
+    padding: 10px 12px;
+    line-height: 1.8;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+  }
+  .err  { color: #ff5252; }
+  .warn { color: #ffb400; }
+  .ok   { color: #69f069; }
+  .dim  { color: #555; }
+  .cmd  { color: #fff; }
+  .result { color: var(--blue); }
+
+  .tip {
+    border: 1px solid rgba(100,150,255,0.3);
+    background: rgba(100,150,255,0.06);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 16px 0;
+    font-size: 11px;
+    color: var(--blue);
+    line-height: 1.8;
+  }
+  .tip b { color: #fff; }
+
+  .success-box {
+    border: 1px solid var(--green);
+    background: rgba(76,175,80,0.07);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 20px 0;
+    font-size: 12px;
+    color: var(--green);
+    line-height: 1.8;
+  }
+
+  .back-btn {
+    display: inline-block;
+    margin-top: 32px;
+    padding: 9px 20px;
+    background: rgba(76,175,80,0.12);
+    border: 1px solid var(--green);
+    color: var(--green);
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+  .back-btn:hover { background: rgba(76,175,80,0.25); }
+
+  kbd {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 11px;
+    font-family: 'Courier New', monospace;
+  }
+
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 32px 0 20px;
+    color: var(--text-dim);
+    font-size: 10px;
+    letter-spacing: 2px;
+  }
+  .section-divider::before,
+  .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="/">← mojioko に戻る</a>
+  <h1>// PLAUD TOKEN 取得ガイド</h1>
+  <div style="color:var(--text-dim); font-size:11px; margin-top:4px;">Googleアカウントでログインしている方向け</div>
+</div>
+
+<!-- ===== DevTools方法 ===== -->
+<h2>▶ 方法① DevTools コンソール（PC推奨）</h2>
+<p style="color:var(--text-dim); font-size:11px; margin-bottom:14px;">Chromeの開発者ツールを使ってトークンを取得します。手順通りにやれば3分で完了。</p>
+
+<div class="step">
+  <div class="step-num">STEP 1</div>
+  <div class="step-body">
+    <div class="step-title"><a href="https://web.plaud.ai" target="_blank" style="color:var(--amber); text-decoration:none;">web.plaud.ai →</a> を開いてGoogleでログイン</div>
+    <div class="step-note">すでにログイン済みならそのままでOK</div>
+  </div>
+</div>
+<div class="arrow">▼</div>
+
+<div class="step">
+  <div class="step-num">STEP 2</div>
+  <div class="step-body">
+    <div class="step-title">DevToolsを開く</div>
+    <div class="step-note">
+      方法A：ページ上で<b>右クリック</b> →「<b>検証</b>」をクリック<br>
+      方法B：キーボードショートカット <kbd>F12</kbd>（Windowsは<kbd>F12</kbd>、Macは<kbd>⌥⌘I</kbd>）
+    </div>
+  </div>
+</div>
+<div class="arrow">▼</div>
+
+<div class="step">
+  <div class="step-num">STEP 3</div>
+  <div class="step-body">
+    <div class="step-title"><b style="color:var(--amber);">Console</b> タブをクリック</div>
+    <div class="step-note">画面上部のタブから「Console」を選択</div>
+  </div>
+</div>
+<div class="arrow">▼</div>
+
+<div class="step">
+  <div class="step-num">STEP 4</div>
+  <div class="step-body">
+    <div class="step-title">ペースト許可を有効にする（初回のみ）</div>
+    <div class="step-note">コンソールの <code style="color:var(--text);">&gt;</code> の横に以下を<b>手打ち</b>して <kbd>Enter</kbd></div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="dot" style="background:#ff5f57"></span>
+    <span class="dot" style="background:#febc2e"></span>
+    <span class="dot" style="background:#28c840"></span>
+    <span style="color:var(--text-dim);">DevTools — Console</span>
+  </div>
+  <div class="screen-body">
+    <span class="warn">⚠ Warning: Don't paste code into the DevTools Console...</span><br>
+    <span class="warn">　Please type 'allow pasting' below and press Enter.</span><br>
+    <span class="cmd">&gt; allow pasting</span> <span class="dim">← ここに手打ち → Enter</span>
+  </div>
+</div>
+
+<div class="tip">⚠️ <b>「allow pasting」はコピペ不可</b>、キーボードで手打ちしてください。<br>Chromeのセキュリティ仕様です。一度やれば以降は不要です。</div>
+
+<div class="arrow">▼</div>
+
+<div class="step">
+  <div class="step-num">STEP 5</div>
+  <div class="step-body">
+    <div class="step-title">下のコードをコピーして、コンソールに貼り付けて <kbd>Enter</kbd></div>
+    <div class="step-note">COPYボタンを押してからコンソールに <kbd>⌘V</kbd> / <kbd>Ctrl+V</kbd> で貼り付け</div>
+  </div>
+</div>
+
+<div class="code-block">
+  <code id="snippet">JSON.parse(localStorage[Object.keys(localStorage).find(k=>k.includes('workspaceList'))]||'[]')[0]?.workspaceToken</code>
+  <button class="copy-btn" onclick="copySnippet()">COPY</button>
+</div>
+
+<div class="arrow">▼</div>
+
+<div class="step">
+  <div class="step-num">STEP 6</div>
+  <div class="step-body">
+    <div class="step-title">トークンが表示される → コピー</div>
+    <div class="step-note"><code style="color:var(--blue);">'eyJhbGci...'</code> のような長い文字列が表示されます</div>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="screen-bar">
+    <span class="dot" style="background:#ff5f57"></span>
+    <span class="dot" style="background:#febc2e"></span>
+    <span class="dot" style="background:#28c840"></span>
+    <span style="color:var(--text-dim);">DevTools — Console</span>
+  </div>
+  <div class="screen-body">
+    <span class="dim">&gt; JSON.parse(localStorage[Object.keys(localStorage)...</span><br>
+    <span class="result">&lt; 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhbGci...'</span><br>
+    <span class="dim">　 ↑ この文字列を全部コピー（クリックして選択 → ⌘C）</span>
+  </div>
+</div>
+
+<div class="arrow">▼</div>
+
+<div class="step">
+  <div class="step-num">STEP 7</div>
+  <div class="step-body">
+    <div class="step-title">mojioko に戻って <b style="color:var(--amber);">TOKEN</b> タブに貼り付け → <b style="color:var(--green);">▶ LINK</b></div>
+    <div class="step-note">録音リストが表示されれば接続完了！</div>
+  </div>
+</div>
+
+<div class="success-box">
+  ✅ 接続完了！録音リストが mojioko に表示されます。<br>
+  トークンは自動保存されるので、次回以降は再ログイン不要です。
+</div>
+
+<!-- ===== パスワード設定方法 ===== -->
+<div class="section-divider">OR</div>
+
+<h2>▶ 方法② PLAUDにパスワード設定（スマホ対応・永久解決）</h2>
+<p style="color:var(--text-dim); font-size:11px; margin-bottom:14px;">一度パスワードを設定すれば、スマホ・PCどこからでもメールでログインできます。</p>
+
+<div class="step">
+  <div class="step-num">STEP 1</div>
+  <div class="step-body">
+    <div class="step-title">
+      <a href="https://web.plaud.ai/user/setting" target="_blank" style="color:var(--amber); text-decoration:none;">PLAUDの設定ページ →</a> を開く
+    </div>
+    <div class="step-note">web.plaud.ai にログイン済みの状態で開く</div>
+  </div>
+</div>
+<div class="arrow">▼</div>
+<div class="step">
+  <div class="step-num">STEP 2</div>
+  <div class="step-body">
+    <div class="step-title">「アカウント」→「パスワード設定」から新しいパスワードを設定</div>
+    <div class="step-note">登録メールアドレス宛に確認メールが届く場合があります</div>
+  </div>
+</div>
+<div class="arrow">▼</div>
+<div class="step">
+  <div class="step-num">STEP 3</div>
+  <div class="step-body">
+    <div class="step-title">mojioko の <b style="color:var(--amber);">PLAUD LOGIN</b> タブでメール＋パスワードでログイン</div>
+    <div class="step-note">スマホでも毎回ワンタップでOK！</div>
+  </div>
+</div>
+
+<div class="success-box">
+  ✅ これが一番スムーズ！一度設定すればスマホからでもログインできます。
+</div>
+
+<div style="text-align:center;">
+  <a href="/" class="back-btn">← mojioko に戻る</a>
+</div>
+
+<script>
+function copySnippet() {
+  const code = document.getElementById('snippet').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ COPIED';
+    setTimeout(() => { btn.textContent = 'COPY'; }, 2000);
+  });
+}
+</script>
+</body>
+</html>
