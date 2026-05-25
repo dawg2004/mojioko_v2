@@ -964,8 +964,20 @@ h1 .accent { color: var(--amber); }
       <div class="plaud-form" id="plaudLoginForm">
 
         <!-- Google login section -->
-        <button class="google-login-btn" onclick="openPlaudForGoogle()">
-          <span class="google-icon">G</span> Googleアカウントでログイン
+        <!-- 推奨: パスワード設定 -->
+        <div style="margin-bottom:8px; padding:10px 12px; background:rgba(76,175,80,0.08); border:1px solid rgba(76,175,80,0.3); border-radius:6px; font-size:11px; line-height:1.8;">
+          <div style="color:var(--green); font-weight:bold; margin-bottom:4px;">✅ Googleアカウント登録の方（推奨）</div>
+          <div style="color:var(--text);">PLAUDにパスワードを設定すると<br>スマホ・PCどこからでもログインできます</div>
+          <a href="https://app.plaud.ai/user/setting" target="_blank"
+             style="display:block; margin-top:8px; padding:7px 12px; background:rgba(76,175,80,0.15); border:1px solid var(--green); border-radius:4px; color:var(--green); text-decoration:none; text-align:center; font-size:11px; font-weight:bold;">
+            🔑 PLAUDでパスワードを設定する →
+          </a>
+          <div style="color:var(--text-dim); font-size:10px; margin-top:4px; text-align:center;">設定後は下の「メールでログイン」が使えます</div>
+        </div>
+
+        <!-- 上級者向け: ブックマークレット -->
+        <button class="google-login-btn" onclick="openPlaudForGoogle()" style="opacity:0.7; font-size:11px;">
+          <span class="google-icon" style="font-size:12px;">G</span> PCブラウザでブックマークを使う（上級者向け）
         </button>
         <div id="googleStep2" style="display:none; margin-top:10px;">
           <!-- 図解フロー -->
