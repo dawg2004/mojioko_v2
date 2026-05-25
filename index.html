@@ -891,6 +891,11 @@ h1 .accent { color: var(--amber); }
 .rec-btn.transcript:hover { background: rgba(76,175,80,0.1); border-color: var(--green); }
 .rec-btn.whisper { border-color: var(--amber-dim); color: var(--amber); }
 .rec-btn.whisper:hover { background: rgba(212,134,10,0.08); border-color: var(--amber); }
+.rec-btn.play { border-color: rgba(100,180,255,0.4); color: #6ab4ff; }
+.rec-btn.play:hover { background: rgba(100,180,255,0.1); border-color: #6ab4ff; }
+.rec-btn.play.playing { background: rgba(100,180,255,0.15); border-color: #6ab4ff; color: #fff; }
+.rec-player { margin-top: 6px; }
+.rec-player audio { width: 100%; height: 32px; filter: invert(1) hue-rotate(180deg); opacity: 0.85; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
@@ -1597,9 +1602,11 @@ async function loadRecordings() {
         <div class="rec-name" title="${safeName}">${safeName}</div>
         <div class="rec-date">${date}${dur}</div>
         <div class="rec-actions">
-          <button class="rec-btn transcript" onclick="getPlaudTranscript('${id}','${safeName}')">GET TRANSCRIPT</button>
-          <button class="rec-btn whisper" onclick="loadForWhisper('${id}','${safeName}')">WHISPER ▶</button>
-        </div>`;
+          <button class="rec-btn play" id="playBtn_${id}" onclick="playPlaudAudio('${id}','${safeName}',this)">▶ PLAY</button>
+          <button class="rec-btn transcript" onclick="getPlaudTranscript('${id}','${safeName}')">TRANSCRIPT</button>
+          <button class="rec-btn whisper" onclick="loadForWhisper('${id}','${safeName}')">WHISPER</button>
+        </div>
+        <div class="rec-player" id="player_${id}" style="display:none;"></div>`;
       list.appendChild(div);
     });
     crtLog(`RECORDS LOADED: ${arr.length} FILES`, 'bright');
@@ -1645,6 +1652,53 @@ async function getPlaudTranscript(fileId, fileName) {
     document.getElementById('mStatus').textContent = 'FAIL';
     crtLog(`TRANSCRIPT ERR: ${e.message}`, 'err');
     showError('PLAUD ERR: ' + e.message);
+  }
+}
+
+async function playPlaudAudio(fileId, fileName, btn) {
+  const playerDiv = document.getElementById(`player_${fileId}`);
+
+  // すでにプレーヤーがある場合はトグル
+  const existing = playerDiv.querySelector('audio');
+  if (existing) {
+    if (existing.paused) {
+      existing.play();
+      btn.textContent = '⏸ PAUSE';
+      btn.classList.add('playing');
+    } else {
+      existing.pause();
+      btn.textContent = '▶ PLAY';
+      btn.classList.remove('playing');
+    }
+    return;
+  }
+
+  btn.textContent = '⏳...';
+  btn.disabled = true;
+  try {
+    const urlData = await plaudFetch(`/file/temp-url/${fileId}?is_opus=false`);
+    const mp3Url = urlData.temp_url ||
+                   (urlData.data && (urlData.data.temp_url || urlData.data.url)) ||
+                   urlData.url;
+    if (!mp3Url) throw new Error('NO URL');
+
+    const audio = document.createElement('audio');
+    audio.controls = true;
+    audio.src = mp3Url;
+    audio.onplay  = () => { btn.textContent = '⏸ PAUSE'; btn.classList.add('playing'); };
+    audio.onpause = () => { btn.textContent = '▶ PLAY';  btn.classList.remove('playing'); };
+    audio.onended = () => { btn.textContent = '▶ PLAY';  btn.classList.remove('playing'); };
+    playerDiv.innerHTML = '';
+    playerDiv.appendChild(audio);
+    playerDiv.style.display = 'block';
+    audio.play();
+    crtLog(`▶ PLAYING: ${fileName}`, 'ok');
+  } catch(e) {
+    btn.textContent = '▶ PLAY';
+    crtLog(`PLAY ERR: ${e.message}`, 'err');
+    toast(`再生エラー: ${e.message}`);
+  } finally {
+    btn.disabled = false;
   }
 }
 
