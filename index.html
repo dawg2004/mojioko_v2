@@ -1858,9 +1858,8 @@ function runPostDecodeStep(label, fn) {
   try {
     return fn();
   } catch (e) {
-    const message = e && e.message ? e.message : String(e);
     console.warn(`[mojioko] ${label} skipped:`, e);
-    crtLog(`>> ${label} SKIPPED: ${message}`, 'warn');
+    crtLog(`>> ${label} SKIPPED`, 'warn');
     return null;
   }
 }
