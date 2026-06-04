@@ -1294,6 +1294,8 @@ h1 .accent { color: var(--amber); }
 let currentFile = null;
 let lastResult = '';
 let lastTranslation = '';
+const HISTORY_KEY = 'mojioko_history';
+const HISTORY_MAX = 30;
 
 // ── PLAUD ─────────────────────────────────────────────
 const PLAUD_BASE = { us: 'https://api.plaud.ai', eu: 'https://api-euc1.plaud.ai', apne1: 'https://api-apne1.plaud.ai' };
@@ -2159,10 +2161,6 @@ function toast(msg) {
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2200);
 }
-
-// ── HISTORY ─────────────────────────────────────────────
-const HISTORY_KEY = 'mojioko_history';
-const HISTORY_MAX = 30;
 
 function loadHistory() {
   try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
