@@ -1763,13 +1763,21 @@ function _usageKey() {
   return 'groq_used_' + now.toISOString().slice(0, 13); // YYYY-MM-DDTHH
 }
 function getUsedSeconds() {
-  return parseFloat(localStorage.getItem(_usageKey()) || '0');
+  try {
+    return parseFloat(localStorage.getItem(_usageKey()) || '0');
+  } catch (_) {
+    return 0;
+  }
 }
 function addUsedSeconds(secs) {
   if (!secs || secs <= 0) return;
-  const key = _usageKey();
-  const current = parseFloat(localStorage.getItem(key) || '0');
-  localStorage.setItem(key, String(current + secs));
+  try {
+    const key = _usageKey();
+    const current = parseFloat(localStorage.getItem(key) || '0');
+    localStorage.setItem(key, String(current + secs));
+  } catch (e) {
+    console.warn('[mojioko] usage storage skipped:', e);
+  }
   updateUsageMeter();
 }
 function updateUsageMeter() {
@@ -1784,6 +1792,7 @@ function updateUsageMeter() {
 
   const numEl  = document.getElementById('usageNumbers');
   const barEl  = document.getElementById('usageBarFill');
+  if (!numEl || !barEl) return;
   numEl.textContent = `使用 ${fmtMin(used)} / 残り ${fmtMin(remaining)}`;
 
   const warn = pct >= 70;
@@ -1843,6 +1852,17 @@ function crtLog(line, type) {
   el.textContent = line;
   d.appendChild(el);
   if (d.children.length > 8) d.removeChild(d.firstChild);
+}
+
+function runPostDecodeStep(label, fn) {
+  try {
+    return fn();
+  } catch (e) {
+    const message = e && e.message ? e.message : String(e);
+    console.warn(`[mojioko] ${label} skipped:`, e);
+    crtLog(`>> ${label} SKIPPED: ${message}`, 'warn');
+    return null;
+  }
 }
 
 // URLペースト時: STARTボタンをパルスさせてユーザーに押すよう促す
@@ -2023,11 +2043,12 @@ async function execute() {
       text = await res.text();
     }
 
-    lastResult = text;
-    document.getElementById('outputArea').textContent = text;
+    const decodedText = typeof text === 'string' ? text : String(text || '');
+    lastResult = decodedText;
+    document.getElementById('outputArea').textContent = decodedText;
 
-    const chars = text.length;
-    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    const chars = decodedText.length;
+    const words = decodedText.trim().split(/\s+/).filter(Boolean).length;
     document.getElementById('mChars').textContent = chars;
     document.getElementById('mWords').textContent = words;
     document.getElementById('mStatus').textContent = 'OK';
@@ -2035,24 +2056,28 @@ async function execute() {
     crtLog(`>> DECODE COMPLETE. CHARS:${chars} WORDS:${words}`, 'ok');
     crtLog('>> SIGNAL WRITTEN TO OUTPUT TERMINAL', 'ok');
 
-    // 履歴保存
-    const histSrc = currentFile ? currentFile.name : (audioUrl ? audioUrl.split('/').pop().split('?')[0].slice(0,30) : '—');
-    saveHistory(text, histSrc);
+    runPostDecodeStep('HISTORY SAVE', () => {
+      const histSrc = currentFile
+        ? currentFile.name
+        : (audioUrl ? audioUrl.split('/').pop().split('?')[0].slice(0, 30) : '—');
+      saveHistory(decodedText, histSrc);
+    });
 
-    // 使用量を記録
-    if (pendingDuration) {
-      addUsedSeconds(pendingDuration);
-      crtLog(`>> QUOTA USED: +${Math.round(pendingDuration)}s`, '');
-    }
+    runPostDecodeStep('QUOTA UPDATE', () => {
+      if (pendingDuration) {
+        addUsedSeconds(pendingDuration);
+        crtLog(`>> QUOTA USED: +${Math.round(pendingDuration)}s`, '');
+      }
+    });
 
     // If translate mode, show translation section with same result
-    if (mode === 'translate') {
-      lastTranslation = text;
+    if (mode === 'translate') runPostDecodeStep('TRANSLATION VIEW', () => {
+      lastTranslation = decodedText;
       document.getElementById('translationTag').textContent = 'EN TRANSLATION OUTPUT';
-      document.getElementById('translationOutput').textContent = text;
+      document.getElementById('translationOutput').textContent = decodedText;
       document.getElementById('translationBlock').classList.add('visible');
       document.getElementById('outputArea').textContent = '(TRANSLATE MODE: 英語翻訳結果は下部に表示)';
-    }
+    });
 
     // TRANSCRIBE + JA訳モード: 文字起こし後にGroq LLMで日本語翻訳
     if (mode === 'translate_ja') {
@@ -2064,7 +2089,7 @@ async function execute() {
         const trRes = await fetch('/api/translate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, targetLang: 'ja' }),
+          body: JSON.stringify({ text: decodedText, targetLang: 'ja' }),
         });
         const trData = await trRes.json();
         if (trData.translated) {
@@ -2170,40 +2195,53 @@ function saveHistoryList(list) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
 }
 function saveHistory(text, source) {
-  if (!text || text === 'SIGNAL PENDING...') return;
-  const list = loadHistory();
-  const entry = {
-    id: Date.now(),
-    ts: new Date().toISOString(),
-    source: source || '—',
-    chars: text.length,
-    words: text.trim().split(/\s+/).filter(Boolean).length,
-    text,
-  };
-  list.unshift(entry);
-  if (list.length > HISTORY_MAX) list.splice(HISTORY_MAX);
-  saveHistoryList(list);
-  renderHistory();
+  try {
+    const safeText = typeof text === 'string' ? text : String(text || '');
+    const safeSource = typeof source === 'string' ? source : String(source || '—');
+    if (!safeText || safeText === 'SIGNAL PENDING...') return;
+    const list = loadHistory();
+    const entry = {
+      id: Date.now(),
+      ts: new Date().toISOString(),
+      source: safeSource || '—',
+      chars: safeText.length,
+      words: safeText.trim().split(/\s+/).filter(Boolean).length,
+      text: safeText,
+    };
+    list.unshift(entry);
+    if (list.length > HISTORY_MAX) list.splice(HISTORY_MAX);
+    saveHistoryList(list);
+    renderHistory();
+  } catch (e) {
+    console.warn('[mojioko] history save skipped:', e);
+  }
 }
 function renderHistory() {
-  const list = loadHistory();
-  const el = document.getElementById('historyList');
-  if (!el) return;
-  if (!list.length) {
-    el.innerHTML = '<div class="history-empty">NO HISTORY</div>';
-    return;
+  try {
+    const list = loadHistory();
+    const el = document.getElementById('historyList');
+    if (!el) return;
+    if (!list.length) {
+      el.innerHTML = '<div class="history-empty">NO HISTORY</div>';
+      return;
+    }
+    el.innerHTML = list.map((entry, i) => {
+      const d = new Date(entry.ts || Date.now());
+      const source = typeof entry.source === 'string' ? entry.source : '—';
+      const text = typeof entry.text === 'string' ? entry.text : '';
+      const chars = Number.isFinite(entry.chars) ? entry.chars : text.length;
+      const dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+      const src = source.length > 20 ? source.slice(0,20)+'…' : source;
+      const preview = text.replace(/\n/g,' ').slice(0, 80);
+      return `<div class="history-item" onclick="restoreFromHistory(${i})">
+        <div class="history-item-meta">${dateStr}<br>${src}<br>${chars}chr</div>
+        <div class="history-item-preview">${preview}</div>
+        <button class="history-item-del" onclick="event.stopPropagation();deleteHistory(${i})" title="削除">✕</button>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    console.warn('[mojioko] history render skipped:', e);
   }
-  el.innerHTML = list.map((entry, i) => {
-    const d = new Date(entry.ts);
-    const dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    const src = entry.source.length > 20 ? entry.source.slice(0,20)+'…' : entry.source;
-    const preview = entry.text.replace(/\n/g,' ').slice(0, 80);
-    return `<div class="history-item" onclick="restoreFromHistory(${i})">
-      <div class="history-item-meta">${dateStr}<br>${src}<br>${entry.chars}chr</div>
-      <div class="history-item-preview">${preview}</div>
-      <button class="history-item-del" onclick="event.stopPropagation();deleteHistory(${i})" title="削除">✕</button>
-    </div>`;
-  }).join('');
 }
 function restoreFromHistory(i) {
   const list = loadHistory();
